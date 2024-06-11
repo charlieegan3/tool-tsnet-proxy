@@ -1,13 +1,13 @@
 package doh_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/charlieegan3/tool-tsnet-proxy/pkg/doh"
 )
 
 func TestNewLocalDOHServer(t *testing.T) {
-
 	dohServer := NewLocalDOHServer(
 		map[string]string{
 			"example.com": "0.0.0.0",
@@ -15,7 +15,11 @@ func TestNewLocalDOHServer(t *testing.T) {
 	)
 	defer dohServer.Close()
 
-	results, err := doh.QueryA(dohServer.URL, "example.com")
+	res := doh.Resolver{
+		Servers: []string{dohServer.URL},
+	}
+
+	results, err := res.LookupIPAddr(context.Background(), "example.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +29,7 @@ func TestNewLocalDOHServer(t *testing.T) {
 	}
 
 	exp := "0.0.0.0"
-	if results[0] != exp {
+	if results[0].String() != exp {
 		t.Fatalf("Expected %s, got %s", exp, results[0])
 	}
 }

@@ -1,26 +1,19 @@
 package proxy
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
+	"strings"
 	"testing"
 
-	utils_test "github.com/charlieegan3/tool-tsnet-proxy/pkg/test/utils"
+	doh_test "github.com/charlieegan3/tool-tsnet-proxy/pkg/doh/test"
 )
 
 func TestSimpleUseCase(t *testing.T) {
-
-	backendServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Hello, client")
-	}))
-
-	backendServerURL, err := url.Parse(backendServer.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	dohServer := doh_test.NewLocalDOHServer(
 		map[string]string{
@@ -29,33 +22,60 @@ func TestSimpleUseCase(t *testing.T) {
 	)
 	defer dohServer.Close()
 
-	dohServerURL := dohServer.URL
+	backendServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Hello, client"))
+	}))
 
-	opts := &Options{
-		DoHURL: dohServerURL,
-		PortMappings: map[string]string{
-			"example.com": backendServerURL.Port(),
+	backendServerClient := http.Client{
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network string, _ string) (net.Conn, error) {
+				customDialer := &net.Dialer{
+					Resolver: &net.Resolver{
+						PreferGo: true,
+						Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+							conn, err := net.Dial(network, dohServer.URL)
+							if err != nil {
+								return nil, fmt.Errorf("failed to dial DoH server: %w", err)
+							}
+
+							return conn, nil
+						},
+					},
+				}
+
+				conn, err := customDialer.DialContext(ctx, network, strings.TrimPrefix(backendServer.URL, "http://"))
+				if err != nil {
+					return nil, fmt.Errorf("failed to dial backend server: %w", err)
+				}
+
+				return conn, nil
+			},
 		},
 	}
 
-	port := utils_test.FreePort(0)
+	backendServerMatcher := func(req *http.Request) (*http.Client, bool) {
+		if req.URL.Path == "/foobar" {
+			return &backendServerClient, true
+		}
+
+		return nil, false
+	}
+
+	opts := &Options{
+		Matchers: []Matcher{
+			backendServerMatcher,
+		},
+	}
+
+	h := NewHandler(opts)
+
+	proxyServer := httptest.NewServer(h)
+	defer proxyServer.Close()
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/foobar", proxyServer.URL), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	addr := fmt.Sprintf("localhost:%d", port)
-
-	p, err := New(addr, opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/foobar", addr), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req.Header.Add("Host", "example.com")
 
 	client := &http.Client{}
 
@@ -64,16 +84,18 @@ func TestSimpleUseCase(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected status code 200, got %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
+	bodyBs, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if string(body) != "Hello, client" {
-		t.Fatalf("Expected 'Hello, client', got %s", string(body))
+	if resp.StatusCode != http.StatusOK {
+		t.Log(string(bodyBs))
+
+		t.Fatalf("Expected status code 200, got %d", resp.StatusCode)
+	}
+
+	if string(bodyBs) != "Hello, client" {
+		t.Fatalf("Expected 'Hello, client', got %s", string(bodyBs))
 	}
 }

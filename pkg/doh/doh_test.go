@@ -1,6 +1,7 @@
 package doh
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -23,7 +24,11 @@ func TestQuery(t *testing.T) {
 
 	defer testDoHServer.Close()
 
-	results, err := QueryA(testDoHServer.URL, "example.com")
+	res := Resolver{
+		Servers: []string{testDoHServer.URL},
+	}
+
+	results, err := res.LookupIPAddr(context.Background(), "example.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +38,7 @@ func TestQuery(t *testing.T) {
 	}
 
 	exp := "93.184.215.14"
-	if results[0] != exp {
-		t.Fatalf("Expected %s, got %s", exp, results[0])
+	if results[0].String() != exp {
+		t.Fatalf("Expected %s, got %s", exp, results[0].String())
 	}
 }
