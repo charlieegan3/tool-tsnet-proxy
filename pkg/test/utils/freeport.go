@@ -1,4 +1,4 @@
-package utils_test
+package utilstest
 
 import "net"
 

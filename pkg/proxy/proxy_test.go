@@ -1,77 +1,79 @@
 package proxy
 
 import (
-	"context"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httptest"
-	"strings"
+	"net/url"
 	"testing"
 
-	doh_test "github.com/charlieegan3/tool-tsnet-proxy/pkg/doh/test"
+	"github.com/charlieegan3/tool-tsnet-proxy/pkg/httpclient"
+	dnstest "github.com/charlieegan3/tool-tsnet-proxy/pkg/test/dns"
 )
 
-func TestSimpleUseCase(t *testing.T) {
+func TestSimple(t *testing.T) {
+	// example.com is the example upstream server host
+	const upstreamServerHost = "example.com"
 
-	dohServer := doh_test.NewLocalDOHServer(
-		map[string]string{
-			"example.com": "127.0.0.1",
+	// this test dns server will map example.com to the loopback address
+	dnsServer, err := dnstest.NewServer(dnstest.Options{
+		MappingsA: map[string]string{
+			upstreamServerHost + ".": "127.0.0.1",
 		},
-	)
-	defer dohServer.Close()
+	})
+	if err != nil {
+		t.Fatalf("Failed to start DNS server: %s", err)
+	}
+	defer dnsServer.Shutdown()
 
-	backendServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello, client"))
+	// upstream server that is running behind the proxy
+	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for k, v := range r.Header {
+			fmt.Println(k, v)
+		}
+		_, err := w.Write([]byte("Hello, client"))
+		if err != nil {
+			t.Fatalf("Failed to write response: %s", err)
+		}
 	}))
 
-	backendServerClient := http.Client{
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, network string, _ string) (net.Conn, error) {
-				customDialer := &net.Dialer{
-					Resolver: &net.Resolver{
-						PreferGo: true,
-						Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-							conn, err := net.Dial(network, dohServer.URL)
-							if err != nil {
-								return nil, fmt.Errorf("failed to dial DoH server: %w", err)
-							}
-
-							return conn, nil
-						},
-					},
-				}
-
-				conn, err := customDialer.DialContext(ctx, network, strings.TrimPrefix(backendServer.URL, "http://"))
-				if err != nil {
-					return nil, fmt.Errorf("failed to dial backend server: %w", err)
-				}
-
-				return conn, nil
-			},
-		},
+	upstreamServerURL, err := url.Parse(upstreamServer.URL)
+	if err != nil {
+		t.Fatalf("Failed to parse backend server URL: %s", err)
 	}
 
-	backendServerMatcher := func(req *http.Request) (*http.Client, bool) {
+	// client that is configured to send all requests to the upstream server
+	upstreamServerClient := httpclient.NewUpsteamClient(httpclient.UpstreamClientOptions{
+		DNSNetwork: dnsServer.Net,
+		DNSAddr:    dnsServer.Addr,
+		Host:       upstreamServerHost,
+		Port:       upstreamServerURL.Port(),
+	})
+
+	// function that will match requests to the upstream servers
+	upstreamMatcher := func(req *http.Request) (*http.Client, bool) {
 		if req.URL.Path == "/foobar" {
-			return &backendServerClient, true
+			return upstreamServerClient, true
 		}
 
 		return nil, false
 	}
 
+	// create the proxy handler
 	opts := &Options{
-		Matchers: []Matcher{
-			backendServerMatcher,
-		},
+		Matchers: []Matcher{upstreamMatcher},
 	}
 
 	h := NewHandler(opts)
 
+	// start the proxy server within an http test server
 	proxyServer := httptest.NewServer(h)
 	defer proxyServer.Close()
 
+	// make an example request to the proxy server
+	// the request will be matched based on the path. Host routing
+	// is not used as it didn't seem to work with httptest
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/foobar", proxyServer.URL), nil)
 	if err != nil {
 		t.Fatal(err)

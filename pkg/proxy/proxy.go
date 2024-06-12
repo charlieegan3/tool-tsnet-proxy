@@ -37,11 +37,11 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// RequestURI nust be cleared to be accedpted by the client.Do function.
+	// RequestURI nust be cleared to be accepted by the client.Do function.
 	r.RequestURI = ""
 	// here the host and port will be determined by the client, however,
 	// the host and scheme must be set to pass validation.
-	r.URL, _ = r.URL.Parse("http://surplus")
+	r.URL, _ = r.URL.Parse("http://host-is-ignored")
 
 	resp, err := client.Do(r)
 	if err != nil {
@@ -70,6 +70,4 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-
-	return
 }
