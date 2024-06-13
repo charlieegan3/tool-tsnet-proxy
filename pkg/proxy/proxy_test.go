@@ -16,17 +16,6 @@ func TestSimple(t *testing.T) {
 	// example.com is the example upstream server host
 	const upstreamServerHost = "example.com"
 
-	// this test dns server will map example.com to the loopback address
-	dnsServer, err := dnstest.NewServer(dnstest.Options{
-		MappingsA: map[string]string{
-			upstreamServerHost + ".": "127.0.0.1",
-		},
-	})
-	if err != nil {
-		t.Fatalf("Failed to start DNS server: %s", err)
-	}
-	defer dnsServer.Shutdown()
-
 	// upstream server that is running behind the proxy
 	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for k, v := range r.Header {
@@ -42,6 +31,17 @@ func TestSimple(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to parse backend server URL: %s", err)
 	}
+
+	// this test dns server will map example.com to the loopback address
+	dnsServer, err := dnstest.NewServer(dnstest.Options{
+		MappingsA: map[string]string{
+			upstreamServerHost + ".": "127.0.0.1",
+		},
+	})
+	if err != nil {
+		t.Fatalf("Failed to start DNS server: %s", err)
+	}
+	defer dnsServer.Shutdown()
 
 	// client that is configured to send all requests to the upstream server
 	upstreamServerClient := httpclient.NewUpsteamClient(httpclient.UpstreamClientOptions{
@@ -71,17 +71,30 @@ func TestSimple(t *testing.T) {
 	proxyServer := httptest.NewServer(h)
 	defer proxyServer.Close()
 
+	proxyServerURL, err := url.Parse(proxyServer.URL)
+	if err != nil {
+		t.Fatalf("Failed to parse proxy server URL: %s", err)
+	}
+
+	// client that is configured to send all requests to the proxy, regardless of the host
+	proxyServerClient := httpclient.NewUpsteamClient(httpclient.UpstreamClientOptions{
+		DNSNetwork: dnsServer.Net,
+		DNSAddr:    dnsServer.Addr,
+		Host:       upstreamServerHost,
+		Port:       proxyServerURL.Port(),
+	})
+
 	// make an example request to the proxy server
 	// the request will be matched based on the path. Host routing
 	// is not used as it didn't seem to work with httptest
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/foobar", proxyServer.URL), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://example.com:%s/foobar", proxyServerURL.Port()), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	client := &http.Client{}
+	req.Header.Set("Host", upstreamServerHost)
 
-	resp, err := client.Do(req)
+	resp, err := proxyServerClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
