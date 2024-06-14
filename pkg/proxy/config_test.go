@@ -35,8 +35,8 @@ func TestLoadConfig(t *testing.T) {
 	expectedMiddlewares := []ConfigMiddleware{
 		{
 			Kind: "opa",
-			Properties: ConfigMiddlewareProps{
-				Bundle: ConfigBundle{
+			OPAProperties: &ConfigMiddlewarePropsOPA{
+				Bundle: ConfigMiddlewarePropsOPABundle{
 					ServerEndpoint: "https://example.com",
 					Path:           "/bundles/policy.tar.gz",
 				},
@@ -53,11 +53,11 @@ func TestLoadConfig(t *testing.T) {
 			t.Fatalf("Middleware kind did not match expected")
 		}
 
-		if mw.Properties.Bundle.ServerEndpoint != expectedMiddlewares[i].Properties.Bundle.ServerEndpoint {
+		if mw.OPAProperties.Bundle.ServerEndpoint != expectedMiddlewares[i].OPAProperties.Bundle.ServerEndpoint {
 			t.Fatalf("Middleware bundle server-endpoint did not match expected")
 		}
 
-		if mw.Properties.Bundle.Path != expectedMiddlewares[i].Properties.Bundle.Path {
+		if mw.OPAProperties.Bundle.Path != expectedMiddlewares[i].OPAProperties.Bundle.Path {
 			t.Fatalf("Middleware bundle path did not match expected")
 		}
 	}

@@ -14,15 +14,15 @@ type Config struct {
 }
 
 type ConfigMiddleware struct {
-	Kind       string                `yaml:"kind"`
-	Properties ConfigMiddlewareProps `yaml:"properties"`
+	Kind          string                    `yaml:"kind"`
+	OPAProperties *ConfigMiddlewarePropsOPA `yaml:"properties"`
 }
 
-type ConfigMiddlewareProps struct {
-	Bundle ConfigBundle `yaml:"bundle"`
+type ConfigMiddlewarePropsOPA struct {
+	Bundle ConfigMiddlewarePropsOPABundle `yaml:"bundle"`
 }
 
-type ConfigBundle struct {
+type ConfigMiddlewarePropsOPABundle struct {
 	ServerEndpoint string `yaml:"server-endpoint"`
 	Path           string `yaml:"path"`
 }

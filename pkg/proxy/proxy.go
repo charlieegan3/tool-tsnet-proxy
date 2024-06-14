@@ -7,15 +7,6 @@ import (
 	"net/http"
 )
 
-type Options struct {
-	Matchers    []Matcher
-	Middlewares []Middleware
-}
-
-type Matcher func(*http.Request) (*http.Client, bool)
-
-type Middleware func(http.Handler) http.Handler
-
 func NewHandler(opts *Options) (http.Handler, error) {
 	var handler http.Handler
 	handler = &proxy{
