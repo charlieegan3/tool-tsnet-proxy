@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	utilstest "github.com/charlieegan3/tool-tsnet-proxy/pkg/test/utils"
 	"github.com/miekg/dns"
+
+	utilstest "github.com/charlieegan3/tool-tsnet-proxy/pkg/test/utils"
 )
 
 type Options struct {

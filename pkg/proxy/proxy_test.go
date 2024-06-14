@@ -12,9 +12,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/miekg/dns"
+
 	"github.com/charlieegan3/tool-tsnet-proxy/pkg/httpclient"
 	dnstest "github.com/charlieegan3/tool-tsnet-proxy/pkg/test/dns"
-	"github.com/miekg/dns"
 )
 
 func TestProxyWithTwoMatchers(t *testing.T) {

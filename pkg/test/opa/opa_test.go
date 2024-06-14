@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/charlieegan3/tool-tsnet-proxy/pkg/opa"
 	"github.com/open-policy-agent/opa/sdk"
+
+	"github.com/charlieegan3/tool-tsnet-proxy/pkg/opa"
 )
 
 func TestNewBundlerServer(t *testing.T) {

@@ -50,6 +50,8 @@ linters-settings:
     sections:
       - standard
       - default
+      - prefix(github.com/charlieegan3/)
+      - prefix(github.com/charlieegan3/tool-tsnet-proxy)
       - blank
       - dot
 
