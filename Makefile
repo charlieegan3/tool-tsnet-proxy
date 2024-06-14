@@ -6,6 +6,7 @@ watch_test:
 
 lint:
 	golangci-lint run ./...
+	regal lint .
 
 watch_lint:
 	find . | entr -c -r make lint
