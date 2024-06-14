@@ -14,6 +14,7 @@ import (
 type InstanceOptions struct {
 	BundleServerAddr string
 	BundlePath       string
+	Logger           logging.Logger
 }
 
 func NewInstance(ctx context.Context, opts InstanceOptions) (*sdk.OPA, error) {
@@ -41,7 +42,7 @@ func NewInstance(ctx context.Context, opts InstanceOptions) (*sdk.OPA, error) {
 
 	inst, err := sdk.New(ctx, sdk.Options{
 		Config: bytes.NewReader(cfgBytes),
-		Logger: logging.New(),
+		Logger: opts.Logger,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OPA instance: %w", err)

@@ -1,0 +1,26 @@
+dns-servers:
+  - "::1"
+  - "[::1]:53"
+  - "1.1.1.1"
+  - "1.1.1.1:53"
+middlewares:
+  - kind: "opa"
+    properties:
+      bundle:
+        server-endpoint: "https://example.com"
+        path: "/bundles/policy.tar.gz"
+upstreams:
+  - endpoint: "http://internal.example.com"
+    hosts:
+      - "foo.example.com"
+      - "bar.example.com"
+    path-prefixes:
+      - "/foo"
+      - "/bar"
+  - endpoint: "http://internal2.example.com"
+    hosts:
+      - "foo2.example.com"
+      - "bar2.example.com"
+    path-prefixes:
+      - "/foo2"
+      - "/bar2"

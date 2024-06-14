@@ -23,8 +23,8 @@ import (
 	_ "embed"
 )
 
-//go:embed fixtures/policy1.rego
-var regoPolicy1 string
+//go:embed fixtures/policy.rego
+var regoPolicy string
 
 func TestProxyWithTwoMatchers(t *testing.T) {
 	t.Parallel()
@@ -229,7 +229,7 @@ func TestProxyWithMiddlewares(t *testing.T) {
 	}
 
 	bundleServer, err := opatest.NewBundleServer(map[string][]byte{
-		"policy1.rego": []byte(regoPolicy1),
+		"policy1.rego": []byte(regoPolicy),
 	})
 	if err != nil {
 		t.Fatalf("Failed to create bundle server: %v", err)
