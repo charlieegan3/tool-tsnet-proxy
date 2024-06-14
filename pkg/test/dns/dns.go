@@ -18,6 +18,7 @@ type Options struct {
 func NewServer(opts Options) (*dns.Server, error) {
 	if opts.Port == 0 {
 		var err error
+
 		opts.Port, err = utilstest.FreePort(0)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get free port: %w", err)
@@ -36,6 +37,7 @@ func NewServer(opts Options) (*dns.Server, error) {
 
 	dnsMux.HandleFunc(".", func(w dns.ResponseWriter, r *dns.Msg) {
 		m := new(dns.Msg)
+		//nolint:errcheck
 		defer w.WriteMsg(m)
 
 		m.SetReply(r)
@@ -56,6 +58,7 @@ func NewServer(opts Options) (*dns.Server, error) {
 			m.Answer = append(m.Answer, rr)
 		}
 
+		//nolint:errcheck
 		w.WriteMsg(m)
 	})
 

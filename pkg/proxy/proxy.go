@@ -24,8 +24,10 @@ type proxy struct {
 
 func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var client *http.Client
+
 	for _, matcher := range p.matchers {
 		var ok bool
+
 		client, ok = matcher(r)
 		if ok {
 			break
@@ -34,6 +36,7 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if client == nil {
 		http.Error(w, "not found", http.StatusNotFound)
+
 		return
 	}
 
@@ -49,6 +52,7 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fmt.Errorf("failed to send request: %w", err).Error(),
 			http.StatusBadGateway,
 		)
+
 		return
 	}
 	defer resp.Body.Close()
@@ -68,6 +72,7 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fmt.Errorf("failed to copy response body: %w", err).Error(),
 			http.StatusBadGateway,
 		)
+
 		return
 	}
 }

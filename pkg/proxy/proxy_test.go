@@ -1,13 +1,16 @@
 package proxy
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/charlieegan3/tool-tsnet-proxy/pkg/httpclient"
 	dnstest "github.com/charlieegan3/tool-tsnet-proxy/pkg/test/dns"
@@ -15,12 +18,14 @@ import (
 )
 
 func TestProxyWithTwoMatchers(t *testing.T) {
-	// example.com is the example upstream server host
-	const upstreamServerHost1 = "1.example.com"
-	const upstreamServerHost2 = "2.example.com"
+	t.Parallel()
 
-	const externalHost1 = "ext1.example.com"
-	const externalHost2 = "ext2.example.com"
+	const (
+		upstreamServerHost1 = "1.example.com"
+		upstreamServerHost2 = "2.example.com"
+		externalHost1       = "ext1.example.com"
+		externalHost2       = "ext2.example.com"
+	)
 
 	// this test dns server will map example.com to the loopback address
 	// where the test servers are running
@@ -35,11 +40,12 @@ func TestProxyWithTwoMatchers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to start DNS server: %s", err)
 	}
+	//nolint:errcheck
 	defer dnsServer.Shutdown()
 
 	// upstream servers that are running behind the proxy
-	upstreamServerHandler1 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte("Hello, client"))
+	upstreamServerHandler1 := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, err := w.Write([]byte("1"))
 		if err != nil {
 			t.Fatalf("Failed to write response: %s", err)
 		}
@@ -49,6 +55,7 @@ func TestProxyWithTwoMatchers(t *testing.T) {
 		upstreamServerHandler1,
 		dnsServer,
 	)
+
 	defer upstreamServer1.Close()
 
 	// function that will match requests to the upstream servers
@@ -65,8 +72,8 @@ func TestProxyWithTwoMatchers(t *testing.T) {
 	}
 
 	// upstream servers that are running behind the proxy
-	upstreamServerHandler2 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte("Hello, client"))
+	upstreamServerHandler2 := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, err := w.Write([]byte("2"))
 		if err != nil {
 			t.Fatalf("Failed to write response: %s", err)
 		}
@@ -76,6 +83,7 @@ func TestProxyWithTwoMatchers(t *testing.T) {
 		upstreamServerHandler2,
 		dnsServer,
 	)
+
 	defer upstreamServer2.Close()
 
 	// function that will match requests to the upstream servers
@@ -104,10 +112,12 @@ func TestProxyWithTwoMatchers(t *testing.T) {
 	defer proxyServer.Close()
 
 	// make an example request to the proxy server to upstreamServer1
-	req, err := http.NewRequest("GET", fmt.Sprintf(
-		"http://%s:%s/foobar",
-		externalHost1,
-		proxyServerURL.Port(),
+	ctx1, cancel1 := context.WithTimeout(context.Background(), time.Second)
+	defer cancel1()
+
+	req, err := http.NewRequestWithContext(ctx1, http.MethodGet, fmt.Sprintf(
+		"http://%s/foobar",
+		net.JoinHostPort(externalHost1, proxyServerURL.Port()),
 	), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -115,34 +125,40 @@ func TestProxyWithTwoMatchers(t *testing.T) {
 
 	req.Header.Set("Host", upstreamServerHost1)
 
-	resp, err := proxyServerClient.Do(req)
+	resp1, err := proxyServerClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp1.Body.Close()
 
-	assertStatusAndContent(t, resp, 200, "Hello, client")
+	assertStatusAndContent(t, resp1, http.StatusOK, "1")
 
 	// make an example request to the proxy server to upstreamServer2
-	req, err = http.NewRequest("GET", fmt.Sprintf(
-		"http://%s:%s/foobar",
-		externalHost2,
-		proxyServerURL.Port(),
+	ctx2, cancel2 := context.WithTimeout(context.Background(), time.Second)
+	defer cancel2()
+
+	req, err = http.NewRequestWithContext(ctx2, http.MethodGet, fmt.Sprintf(
+		"http://%s/foobar",
+		net.JoinHostPort(externalHost2, proxyServerURL.Port()),
 	), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	req.Header.Set("Host", upstreamServerHost1)
+	req.Header.Set("Host", upstreamServerHost2)
 
-	resp, err = proxyServerClient.Do(req)
+	resp2, err := proxyServerClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp2.Body.Close()
 
-	assertStatusAndContent(t, resp, 200, "Hello, client")
+	assertStatusAndContent(t, resp2, http.StatusOK, "2")
 }
 
 func assertStatusAndContent(t *testing.T, resp *http.Response, status int, content string) {
+	t.Helper()
+
 	bodyBs, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)

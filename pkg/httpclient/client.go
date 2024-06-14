@@ -43,7 +43,7 @@ func NewUpsteamClient(opts UpstreamClientOptions) *http.Client {
 				customDialer := &net.Dialer{
 					Resolver: &net.Resolver{
 						PreferGo: true,
-						Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+						Dial: func(_ context.Context, _, _ string) (net.Conn, error) {
 							conn, err := net.Dial(dnsNetwork, dnsAddr)
 							if err != nil {
 								return nil, fmt.Errorf("failed to dial dns server: %w", err)
