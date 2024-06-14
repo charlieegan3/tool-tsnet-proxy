@@ -1,21 +1,37 @@
 package proxy
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 )
 
 type Options struct {
-	Matchers []Matcher
+	Matchers    []Matcher
+	Middlewares []Middleware
 }
 
 type Matcher func(*http.Request) (*http.Client, bool)
 
-func NewHandler(opts *Options) http.Handler {
-	return &proxy{
+type Middleware func(http.Handler) http.Handler
+
+func NewHandler(opts *Options) (http.Handler, error) {
+	var handler http.Handler
+	handler = &proxy{
 		matchers: opts.Matchers,
 	}
+
+	// middlewares are applied in reverse order to they are called
+	// in the order that they appear in the slice.
+	for i := len(opts.Middlewares) - 1; i >= 0; i-- {
+		handler = opts.Middlewares[i](handler)
+		if handler == nil {
+			return nil, errors.New("middleware returned nil handler")
+		}
+	}
+
+	return handler, nil
 }
 
 type proxy struct {
@@ -40,7 +56,7 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// RequestURI nust be cleared to be accepted by the client.Do function.
+	// RequestURI must be cleared to be accepted by the client.Do function.
 	r.RequestURI = ""
 	// here the host and port will be determined by the client, however,
 	// the host and scheme must be set to pass validation.
