@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/charlieegan3/tool-tsnet-proxy/pkg/httpclient"
@@ -15,6 +16,8 @@ import (
 func TestSimple(t *testing.T) {
 	// example.com is the example upstream server host
 	const upstreamServerHost = "example.com"
+
+	const externaHost = "proxy.example.com"
 
 	// upstream server that is running behind the proxy
 	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +39,7 @@ func TestSimple(t *testing.T) {
 	dnsServer, err := dnstest.NewServer(dnstest.Options{
 		MappingsA: map[string]string{
 			upstreamServerHost + ".": "127.0.0.1",
+			externaHost + ".":        "127.0.0.1",
 		},
 	})
 	if err != nil {
@@ -53,11 +57,15 @@ func TestSimple(t *testing.T) {
 
 	// function that will match requests to the upstream servers
 	upstreamMatcher := func(req *http.Request) (*http.Client, bool) {
-		if req.URL.Path == "/foobar" {
-			return upstreamServerClient, true
+		if req.URL.Path != "/foobar" {
+			return nil, false
 		}
 
-		return nil, false
+		if !strings.HasPrefix(req.Host, externaHost) {
+			return nil, false
+		}
+
+		return upstreamServerClient, true
 	}
 
 	// create the proxy handler
@@ -80,14 +88,14 @@ func TestSimple(t *testing.T) {
 	proxyServerClient := httpclient.NewUpsteamClient(httpclient.UpstreamClientOptions{
 		DNSNetwork: dnsServer.Net,
 		DNSAddr:    dnsServer.Addr,
-		Host:       upstreamServerHost,
+		Host:       externaHost,
 		Port:       proxyServerURL.Port(),
 	})
 
 	// make an example request to the proxy server
 	// the request will be matched based on the path. Host routing
 	// is not used as it didn't seem to work with httptest
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://example.com:%s/foobar", proxyServerURL.Port()), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%s/foobar", externaHost, proxyServerURL.Port()), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
