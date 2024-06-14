@@ -3,6 +3,12 @@ module github.com/charlieegan3/tool-tsnet-proxy
 go 1.22.4
 
 require (
+	github.com/miekg/dns v1.1.59
+	github.com/open-policy-agent/opa v0.65.0
+	gopkg.in/yaml.v2 v2.4.0
+)
+
+require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/Microsoft/hcsshim v0.12.4 // indirect
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
@@ -22,9 +28,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
-	github.com/miekg/dns v1.1.59 // indirect
 	github.com/moby/locker v1.0.1 // indirect
-	github.com/open-policy-agent/opa v0.65.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/prometheus/client_golang v1.19.1 // indirect
@@ -52,7 +56,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240610135401-a8a62080eff3 // indirect
 	google.golang.org/grpc v1.64.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
