@@ -251,10 +251,8 @@ func TestProxyWithMiddlewares(t *testing.T) {
 	policyMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			rs, err := opaInstance.Decision(ctx, sdk.DecisionOptions{
-				Path: "authz/allow",
-				Input: map[string]interface{}{
-					"headers": r.Header,
-				},
+				Path:  "authz/allow",
+				Input: opa.InputFromHTTPRequest(r),
 			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
