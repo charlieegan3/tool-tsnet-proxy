@@ -8,9 +8,14 @@ import (
 )
 
 type Config struct {
-	DNSServers  []string           `yaml:"dns-servers"`
+	DNSServers  []ConfigDNSServer  `yaml:"dns-servers"`
 	Middlewares []ConfigMiddleware `yaml:"middlewares"`
 	Upstreams   []ConfigUpstream   `yaml:"upstreams"`
+}
+
+type ConfigDNSServer struct {
+	Addr string `yaml:"addr"`
+	Net  string `yaml:"net"`
 }
 
 type ConfigMiddleware struct {

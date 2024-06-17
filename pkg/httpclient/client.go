@@ -2,29 +2,24 @@ package httpclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
 )
 
 type UpstreamClientOptions struct {
-	DNSNetwork string
-	DNSAddr    string
+	DNSServers []DNSServer
 	Host       string
 	Port       string
 }
 
+type DNSServer struct {
+	Network string
+	Addr    string
+}
+
 func NewUpsteamClient(opts UpstreamClientOptions) *http.Client {
-	dnsNetwork := opts.DNSNetwork
-	if dnsNetwork == "" {
-		dnsNetwork = "tcp6"
-	}
-
-	dnsAddr := opts.DNSAddr
-	if dnsAddr == "" {
-		dnsAddr = "[::1]:53"
-	}
-
 	upstreamServerHost := opts.Host
 	if opts.Host == "" {
 		upstreamServerHost = "localhost"
@@ -44,9 +39,31 @@ func NewUpsteamClient(opts UpstreamClientOptions) *http.Client {
 					Resolver: &net.Resolver{
 						PreferGo: true,
 						Dial: func(_ context.Context, _, _ string) (net.Conn, error) {
-							conn, err := net.Dial(dnsNetwork, dnsAddr)
-							if err != nil {
-								return nil, fmt.Errorf("failed to dial dns server: %w", err)
+							var conn net.Conn
+							for _, dnsServer := range opts.DNSServers {
+								dnsNetwork := dnsServer.Network
+								if dnsNetwork == "" {
+									dnsNetwork = "tcp6"
+								}
+
+								dnsAddr := dnsServer.Addr
+								if dnsAddr == "" {
+									dnsAddr = "[::1]:53"
+								}
+
+								var err error
+								conn, err = net.Dial(dnsNetwork, dnsAddr)
+								if err != nil {
+									return nil, fmt.Errorf("failed to dial dns server: %w", err)
+								}
+
+								if conn != nil {
+									break
+								}
+							}
+
+							if conn == nil {
+								return nil, errors.New("failed to dial all dns servers")
 							}
 
 							return conn, nil

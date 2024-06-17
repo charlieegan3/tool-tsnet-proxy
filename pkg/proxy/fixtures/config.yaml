@@ -1,8 +1,12 @@
 dns-servers:
-  - "::1"
-  - "[::1]:53"
-  - "1.1.1.1"
-  - "1.1.1.1:53"
+  - addr: "::1"
+    net: "udp6"
+  - addr: "[::1]:53"
+    net: "tcp6"
+  - addr: "1.1.1.1"
+    net: "udp4"
+  - addr: "1.1.1.1:53"
+    net: "tcp4"
 middlewares:
   - kind: "opa"
     properties:

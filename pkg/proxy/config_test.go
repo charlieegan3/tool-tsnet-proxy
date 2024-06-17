@@ -21,11 +21,11 @@ func TestLoadConfig(t *testing.T) {
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	expectedDNSServers := []string{
-		"::1",
-		"[::1]:53",
-		"1.1.1.1",
-		"1.1.1.1:53",
+	expectedDNSServers := []ConfigDNSServer{
+		{Addr: "::1", Net: "udp6"},
+		{Addr: "[::1]:53", Net: "tcp6"},
+		{Addr: "1.1.1.1", Net: "udp4"},
+		{Addr: "1.1.1.1:53", Net: "tcp4"},
 	}
 
 	if !slices.Equal(cfg.DNSServers, expectedDNSServers) {

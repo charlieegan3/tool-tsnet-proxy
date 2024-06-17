@@ -1,11 +1,66 @@
 package proxy
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+
+	"github.com/charlieegan3/tool-tsnet-proxy/pkg/httpclient"
 )
+
+func NewHandlerFromConfig(ctx context.Context, config *Config) (http.Handler, error) {
+	dnsServers := make([]httpclient.DNSServer, 0)
+	for _, dnsServer := range config.DNSServers {
+		dnsServers = append(dnsServers, httpclient.DNSServer{
+			Network: dnsServer.Net,
+			Addr:    dnsServer.Addr,
+		})
+	}
+
+	// Create matchers from upstreams
+	matchers := make([]Matcher, 0)
+
+	for _, upstream := range config.Upstreams {
+		upstreamURL, err := url.Parse(upstream.Endpoint)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse upstream URL: %w", err)
+		}
+
+		client := httpclient.NewUpsteamClient(httpclient.UpstreamClientOptions{
+			Host:       upstreamURL.Hostname(),
+			Port:       upstreamURL.Port(),
+			DNSServers: dnsServers,
+		})
+		matcher := MatcherFromUpstream(upstream, client)
+		matchers = append(matchers, matcher)
+	}
+
+	// Create middlewares from config middlewares
+	middlewares := make([]Middleware, 0)
+
+	for _, configMiddleware := range config.Middlewares {
+		middleware, err := MiddlewareFromConfigMiddleware(ctx, configMiddleware)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create middleware: %w", err)
+		}
+
+		middlewares = append(middlewares, middleware)
+	}
+
+	// Create a new proxy handler with the matchers and middlewares
+	handler, err := NewHandler(&Options{
+		Matchers:    matchers,
+		Middlewares: middlewares,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return handler, nil
+}
 
 func NewHandler(opts *Options) (http.Handler, error) {
 	var handler http.Handler
