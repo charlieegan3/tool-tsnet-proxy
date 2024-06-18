@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 )
 
 type UpstreamClientOptions struct {
@@ -32,45 +33,45 @@ func NewUpsteamClient(opts UpstreamClientOptions) *http.Client {
 
 	upstreamServerAddrAndPort := fmt.Sprintf("%s:%s", upstreamServerHost, upstreamServerPort)
 
+	customDialer := &net.Dialer{
+		Resolver: &net.Resolver{
+			PreferGo: true,
+			Dial: func(_ context.Context, _, _ string) (net.Conn, error) {
+				var conn net.Conn
+				for _, dnsServer := range opts.DNSServers {
+					dnsNetwork := dnsServer.Network
+					if dnsNetwork == "" {
+						dnsNetwork = "tcp6"
+					}
+
+					dnsAddr := dnsServer.Addr
+					if dnsAddr == "" {
+						dnsAddr = "[::1]:53"
+					}
+
+					var err error
+					conn, err = net.DialTimeout(dnsNetwork, dnsAddr, time.Second)
+					if err != nil {
+						return nil, fmt.Errorf("failed to dial dns server: %w", err)
+					}
+
+					if conn != nil {
+						break
+					}
+				}
+
+				if conn == nil {
+					return nil, errors.New("failed to dial all dns servers")
+				}
+
+				return conn, nil
+			},
+		},
+	}
+
 	return &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network string, _ string) (net.Conn, error) {
-				customDialer := &net.Dialer{
-					Resolver: &net.Resolver{
-						PreferGo: true,
-						Dial: func(_ context.Context, _, _ string) (net.Conn, error) {
-							var conn net.Conn
-							for _, dnsServer := range opts.DNSServers {
-								dnsNetwork := dnsServer.Network
-								if dnsNetwork == "" {
-									dnsNetwork = "tcp6"
-								}
-
-								dnsAddr := dnsServer.Addr
-								if dnsAddr == "" {
-									dnsAddr = "[::1]:53"
-								}
-
-								var err error
-								conn, err = net.Dial(dnsNetwork, dnsAddr)
-								if err != nil {
-									return nil, fmt.Errorf("failed to dial dns server: %w", err)
-								}
-
-								if conn != nil {
-									break
-								}
-							}
-
-							if conn == nil {
-								return nil, errors.New("failed to dial all dns servers")
-							}
-
-							return conn, nil
-						},
-					},
-				}
-
 				conn, err := customDialer.DialContext(ctx, network, upstreamServerAddrAndPort)
 				if err != nil {
 					return nil, fmt.Errorf("failed to dial upstream server: %w", err)
