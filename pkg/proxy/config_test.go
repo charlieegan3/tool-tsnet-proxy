@@ -104,4 +104,21 @@ func TestLoadConfig(t *testing.T) {
 			t.Fatalf("Upstream path-prefixes did not match expected")
 		}
 	}
+
+	expectedTailnets := map[string]ConfigTailnet{
+		"foobar": {
+			AuthKey: "example",
+		},
+	}
+
+	for k, v := range cfg.Tailnets {
+		tn, ok := expectedTailnets[k]
+		if !ok {
+			t.Fatalf("Key %s not found in expected tailnets", k)
+		}
+
+		if v.AuthKey != tn.AuthKey {
+			t.Fatalf("Auth key value %q for tailnet %q did not match expected %q", v.AuthKey, k, tn.AuthKey)
+		}
+	}
 }

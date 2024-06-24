@@ -8,9 +8,10 @@ import (
 )
 
 type Config struct {
-	DNSServers  []ConfigDNSServer  `yaml:"dns-servers"`
-	Middlewares []ConfigMiddleware `yaml:"middlewares"`
-	Upstreams   []ConfigUpstream   `yaml:"upstreams"`
+	DNSServers  []ConfigDNSServer        `yaml:"dns-servers"`
+	Middlewares []ConfigMiddleware       `yaml:"middlewares"`
+	Upstreams   []ConfigUpstream         `yaml:"upstreams"`
+	Tailnets    map[string]ConfigTailnet `yaml:"tailnets"`
 }
 
 type ConfigDNSServer struct {
@@ -37,6 +38,10 @@ type ConfigUpstream struct {
 	Endpoint     string   `yaml:"endpoint"`
 	Hosts        []string `yaml:"hosts"`
 	PathPrefixes []string `yaml:"path-prefixes"`
+}
+
+type ConfigTailnet struct {
+	AuthKey string `yaml:"auth-key"`
 }
 
 func LoadConfig(r io.Reader) (*Config, error) {

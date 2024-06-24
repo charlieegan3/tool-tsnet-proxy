@@ -10,6 +10,7 @@ import (
 )
 
 type UpstreamClientOptions struct {
+	DialFunc   func(context.Context, string, string) (net.Conn, error)
 	DNSServers []DNSServer
 	Host       string
 	Port       string
@@ -65,7 +66,12 @@ func NewUpsteamClient(opts UpstreamClientOptions) *http.Client {
 		},
 	}
 
-	dialer := net.Dialer{}
+	// a custom dial function can be supplied for tailscale clients
+	dialFunc := opts.DialFunc
+	if opts.DialFunc == nil {
+		dialer := &net.Dialer{}
+		dialFunc = dialer.DialContext
+	}
 
 	return &http.Client{
 		Transport: &http.Transport{
@@ -79,7 +85,7 @@ func NewUpsteamClient(opts UpstreamClientOptions) *http.Client {
 				for _, ip := range ips {
 					upstreamServerAddrAndPort := net.JoinHostPort(ip.String(), upstreamServerPort)
 
-					conn, err = dialer.DialContext(ctx, network, upstreamServerAddrAndPort)
+					conn, err = dialFunc(ctx, network, upstreamServerAddrAndPort)
 					if err != nil {
 						return nil, fmt.Errorf("failed to dial upstream server: %w", err)
 					}

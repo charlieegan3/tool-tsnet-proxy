@@ -7,6 +7,9 @@ dns-servers:
     net: "udp4"
   - addr: "1.1.1.1:53"
     net: "tcp4"
+tailnets:
+  foobar:
+    auth-key: "example"
 middlewares:
   - kind: "opa"
     properties:
