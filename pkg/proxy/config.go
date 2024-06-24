@@ -16,6 +16,7 @@ type Config struct {
 type ConfigDNSServer struct {
 	Addr string `yaml:"addr"`
 	Net  string `yaml:"net"`
+	DoH  bool   `yaml:"doh"`
 }
 
 type ConfigMiddleware struct {

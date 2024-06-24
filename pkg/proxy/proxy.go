@@ -5,15 +5,55 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
+	"strconv"
+	"time"
 
+	"github.com/miekg/dns"
+
+	"github.com/charlieegan3/tool-tsnet-proxy/pkg/doh"
 	"github.com/charlieegan3/tool-tsnet-proxy/pkg/httpclient"
+	"github.com/charlieegan3/tool-tsnet-proxy/pkg/utils"
 )
 
-func NewHandlerFromConfig(ctx context.Context, config *Config) (http.Handler, error) {
+func NewHandlerFromConfig(ctx context.Context, config *Config) (
+	http.Handler,
+	[]*dns.Server,
+	error,
+) {
 	dnsServers := make([]httpclient.DNSServer, 0)
+	wrappedDNSServers := make([]*dns.Server, 0)
+
 	for _, dnsServer := range config.DNSServers {
+		if dnsServer.DoH {
+			wrappedDNSServerPort, err := utils.FreePort(0)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to find free port for wrapped DNS server: %w", err)
+			}
+
+			addr := net.JoinHostPort("localhost", strconv.Itoa(wrappedDNSServerPort))
+
+			//nolint:contextcheck
+			dnsServer := doh.NewWrappingDNSServer(
+				&doh.WrappingDNSServerOptions{
+					Addr:       addr,
+					DoHServers: []string{dnsServer.Addr},
+					Timeout:    1 * time.Second,
+				},
+			)
+
+			wrappedDNSServers = append(wrappedDNSServers, dnsServer)
+
+			dnsServers = append(dnsServers, httpclient.DNSServer{
+				Addr:    addr,
+				Network: "tcp",
+			})
+
+			continue
+		}
+
 		dnsServers = append(dnsServers, httpclient.DNSServer{
 			Network: dnsServer.Net,
 			Addr:    dnsServer.Addr,
@@ -26,7 +66,7 @@ func NewHandlerFromConfig(ctx context.Context, config *Config) (http.Handler, er
 	for _, upstream := range config.Upstreams {
 		upstreamURL, err := url.Parse(upstream.Endpoint)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse upstream URL: %w", err)
+			return nil, nil, fmt.Errorf("failed to parse upstream URL: %w", err)
 		}
 
 		client := httpclient.NewUpsteamClient(httpclient.UpstreamClientOptions{
@@ -44,7 +84,7 @@ func NewHandlerFromConfig(ctx context.Context, config *Config) (http.Handler, er
 	for _, configMiddleware := range config.Middlewares {
 		middleware, err := MiddlewareFromConfigMiddleware(ctx, configMiddleware)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create middleware: %w", err)
+			return nil, nil, fmt.Errorf("failed to create middleware: %w", err)
 		}
 
 		middlewares = append(middlewares, middleware)
@@ -56,10 +96,10 @@ func NewHandlerFromConfig(ctx context.Context, config *Config) (http.Handler, er
 		Middlewares: middlewares,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return handler, nil
+	return handler, wrappedDNSServers, nil
 }
 
 func NewHandler(opts *Options) (http.Handler, error) {

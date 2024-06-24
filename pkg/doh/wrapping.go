@@ -15,6 +15,10 @@ type WrappingDNSServerOptions struct {
 }
 
 func NewWrappingDNSServer(opts *WrappingDNSServerOptions) *dns.Server {
+	if opts.Timeout == 0 {
+		opts.Timeout = 1 * time.Second
+	}
+
 	dnsMux := dns.NewServeMux()
 
 	dnsMux.HandleFunc(".", func(w dns.ResponseWriter, r *dns.Msg) {

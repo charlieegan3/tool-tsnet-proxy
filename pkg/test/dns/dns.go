@@ -6,7 +6,7 @@ import (
 
 	"github.com/miekg/dns"
 
-	utilstest "github.com/charlieegan3/tool-tsnet-proxy/pkg/test/utils"
+	"github.com/charlieegan3/tool-tsnet-proxy/pkg/utils"
 )
 
 type Options struct {
@@ -20,7 +20,7 @@ func NewServer(opts Options) (*dns.Server, error) {
 	if opts.Port == 0 {
 		var err error
 
-		opts.Port, err = utilstest.FreePort(0)
+		opts.Port, err = utils.FreePort(0)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get free port: %w", err)
 		}

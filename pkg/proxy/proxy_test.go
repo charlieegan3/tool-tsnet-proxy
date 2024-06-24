@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -15,10 +17,13 @@ import (
 	"github.com/miekg/dns"
 	"github.com/open-policy-agent/opa/sdk"
 
+	"github.com/charlieegan3/tool-tsnet-proxy/pkg/doh"
 	"github.com/charlieegan3/tool-tsnet-proxy/pkg/httpclient"
 	opa "github.com/charlieegan3/tool-tsnet-proxy/pkg/opa"
 	dnstest "github.com/charlieegan3/tool-tsnet-proxy/pkg/test/dns"
+	dohtest "github.com/charlieegan3/tool-tsnet-proxy/pkg/test/doh"
 	opatest "github.com/charlieegan3/tool-tsnet-proxy/pkg/test/opa"
+	"github.com/charlieegan3/tool-tsnet-proxy/pkg/utils"
 
 	_ "embed"
 )
@@ -332,17 +337,12 @@ func TestProxyWithMiddlewaresFromConfig(t *testing.T) {
 		externalHost       = "proxy.example.com"
 	)
 
-	dnsServer, err := dnstest.NewServer(dnstest.Options{
-		MappingsA: map[string]string{
-			upstreamServerHost + ".": "127.0.0.1",
-			externalHost + ".":       "127.0.0.1",
+	dohServer := dohtest.NewLocalDOHServer(
+		map[string]string{
+			upstreamServerHost: "127.0.0.1",
+			externalHost:       "127.0.0.1",
 		},
-	})
-	if err != nil {
-		t.Fatalf("Failed to start DNS server: %s", err)
-	}
-	//nolint:errcheck
-	defer dnsServer.Shutdown()
+	)
 
 	upstreamServerHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		testHeader := r.Header.Get("X-Test")
@@ -352,11 +352,12 @@ func TestProxyWithMiddlewaresFromConfig(t *testing.T) {
 			t.Fatalf("Failed to write response: %s", err)
 		}
 	})
-	upstreamServer, _, _ := newTestServerAndClient(
-		upstreamServerHost,
-		upstreamServerHandler,
-		dnsServer,
-	)
+
+	upstreamServer := httptest.NewServer(upstreamServerHandler)
+
+	defer upstreamServer.Close()
+
+	upstreamServerURL, _ := url.Parse(upstreamServer.URL)
 
 	bundleServer, err := opatest.NewBundleServer(map[string][]byte{
 		"policy1.rego": []byte(regoPolicy),
@@ -370,7 +371,7 @@ func TestProxyWithMiddlewaresFromConfig(t *testing.T) {
 	cfg := fmt.Sprintf(`
 dns-servers:
   - addr: %q
-    net: "tcp"
+    doh: true
 middlewares:
   - kind: "opa"
     properties:
@@ -378,7 +379,7 @@ middlewares:
         server-endpoint: %q
         path: "/bundles/policy.tar.gz"
 upstreams:
-  - endpoint: %q
+  - endpoint: "http://internal.example.com:%s"
     hosts:
       - %q
     path-prefixes:
@@ -389,7 +390,7 @@ upstreams:
       - "bar.example.com"
     path-prefixes:
       - "/bar"
-`, dnsServer.Addr, bundleServer.URL, upstreamServer.URL, externalHost)
+`, dohServer.URL, bundleServer.URL, upstreamServerURL.Port(), externalHost)
 
 	loadedCfg, err := LoadConfig(strings.NewReader(cfg))
 	if err != nil {
@@ -399,15 +400,32 @@ upstreams:
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	proxyHandler, err := NewHandlerFromConfig(ctx, loadedCfg)
+	proxyHandler, dohDNSServers, err := NewHandlerFromConfig(ctx, loadedCfg)
 	if err != nil {
 		t.Fatalf("Failed to create proxy handler: %v", err)
+	}
+
+	for _, dnsServer := range dohDNSServers {
+		go func(dnsServer *dns.Server) {
+			if err := dnsServer.ListenAndServe(); err != nil {
+				log.Fatalf("Failed to start DNS server: %s\n", err.Error())
+			}
+		}(dnsServer)
+	}
+
+	testClientdnsServer, err := dnstest.NewServer(dnstest.Options{
+		MappingsA: map[string]string{
+			externalHost + ".": "127.0.0.1",
+		},
+	})
+	if err != nil {
+		t.Fatalf("Failed to start 'local' proxy client's DNS server: %s", err)
 	}
 
 	proxyServer, proxyServerURL, proxyServerClient := newTestServerAndClient(
 		externalHost,
 		proxyHandler,
-		dnsServer,
+		testClientdnsServer,
 	)
 	defer proxyServer.Close()
 
@@ -456,6 +474,113 @@ upstreams:
 	assertStatusAndContent(t, resp, http.StatusOK, headerValue)
 }
 
+func TestProxyWithDoH(t *testing.T) {
+	t.Parallel()
+
+	const (
+		upstreamServerHost = "internal.example.com"
+		externalHost       = "proxy.example.com"
+	)
+
+	dohServer := dohtest.NewLocalDOHServer(
+		map[string]string{
+			upstreamServerHost: "127.0.0.1",
+			externalHost:       "127.0.0.1",
+		},
+	)
+	defer dohServer.Close()
+
+	freePort, err := utils.FreePort(0)
+	if err != nil {
+		t.Fatalf("Failed to get free port: %v", err)
+	}
+
+	dnsServer := doh.NewWrappingDNSServer(&doh.WrappingDNSServerOptions{
+		Addr:       net.JoinHostPort("localhost", strconv.Itoa(freePort)),
+		DoHServers: []string{dohServer.URL},
+		Timeout:    time.Second,
+	})
+	go func() {
+		if err := dnsServer.ListenAndServe(); err != nil {
+			log.Fatalf("Failed to start DNS server: %s\n", err.Error())
+		}
+	}()
+	//nolint:errcheck
+	defer dnsServer.Shutdown()
+
+	upstreamServerHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, err := w.Write([]byte("upstream"))
+		if err != nil {
+			t.Fatalf("Failed to write response: %s", err)
+		}
+	})
+	upstreamServer, _, _ := newTestServerAndClient(
+		upstreamServerHost,
+		upstreamServerHandler,
+		dnsServer,
+	)
+
+	cfg := fmt.Sprintf(`
+dns-servers:
+  - addr: %q
+    doh: true
+upstreams:
+  - endpoint: %q
+    hosts:
+      - %q
+    path-prefixes:
+      - "/foo"
+      - "/bar"
+  - endpoint: "http://internal-bar.example.com"
+    hosts:
+      - "bar.example.com"
+    path-prefixes:
+      - "/bar"
+`, dnsServer.Addr, upstreamServer.URL, externalHost)
+
+	loadedCfg, err := LoadConfig(strings.NewReader(cfg))
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	proxyHandler, _, err := NewHandlerFromConfig(ctx, loadedCfg)
+	if err != nil {
+		t.Fatalf("Failed to create proxy handler: %v", err)
+	}
+
+	proxyServer, proxyServerURL, proxyServerClient := newTestServerAndClient(
+		externalHost,
+		proxyHandler,
+		dnsServer,
+	)
+	defer proxyServer.Close()
+
+	// make an example request to the proxy server to upstreamServer1
+	ctx2, cancel2 := context.WithTimeout(context.Background(), time.Second)
+	defer cancel2()
+
+	req, err := http.NewRequestWithContext(ctx2, http.MethodGet, fmt.Sprintf(
+		"http://%s/foo",
+		net.JoinHostPort(externalHost, proxyServerURL.Port()),
+	), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Set("Host", upstreamServerHost)
+
+	resp, err := proxyServerClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	assertStatusAndContent(t, resp, http.StatusOK, "upstream")
+}
+
 func assertStatusAndContent(t *testing.T, resp *http.Response, status int, content string) {
 	t.Helper()
 
@@ -465,11 +590,12 @@ func assertStatusAndContent(t *testing.T, resp *http.Response, status int, conte
 	}
 
 	if resp.StatusCode != status {
-		t.Errorf("Expected status code 200, got %d", resp.StatusCode)
+		t.Log(string(bodyBs))
+		t.Errorf("Expected status code %d, got %d", status, resp.StatusCode)
 	}
 
 	if !strings.Contains(string(bodyBs), content) {
-		t.Errorf("Expected 'Hello, client', got %s", string(bodyBs))
+		t.Errorf("Expected '%s' to contain '%s'", string(bodyBs), content)
 	}
 }
 

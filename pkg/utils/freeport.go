@@ -1,4 +1,4 @@
-package utilstest
+package utils
 
 import (
 	"errors"

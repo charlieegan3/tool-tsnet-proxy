@@ -11,7 +11,7 @@ import (
 	"time"
 
 	dohtest "github.com/charlieegan3/tool-tsnet-proxy/pkg/test/doh"
-	utilstest "github.com/charlieegan3/tool-tsnet-proxy/pkg/test/utils"
+	"github.com/charlieegan3/tool-tsnet-proxy/pkg/utils"
 )
 
 func TestNewWrappingDNSServer(t *testing.T) {
@@ -24,7 +24,7 @@ func TestNewWrappingDNSServer(t *testing.T) {
 	)
 	defer dohServer.Close()
 
-	freePort, err := utilstest.FreePort(0)
+	freePort, err := utils.FreePort(0)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
