@@ -68,6 +68,7 @@ func NewUpsteamClient(opts UpstreamClientOptions) *http.Client {
 
 	// a custom dial function can be supplied for tailscale clients
 	dialFunc := opts.DialFunc
+
 	if opts.DialFunc == nil {
 		dialer := &net.Dialer{}
 		dialFunc = dialer.DialContext

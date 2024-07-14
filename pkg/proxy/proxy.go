@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	"tailscale.com/tsnet"
 
 	"github.com/charlieegan3/tool-tsnet-proxy/pkg/doh"
 	"github.com/charlieegan3/tool-tsnet-proxy/pkg/httpclient"
@@ -60,6 +61,14 @@ func NewHandlerFromConfig(ctx context.Context, config *Config) (
 		})
 	}
 
+	tsNetServers := make(map[string]*tsnet.Server)
+	for k, tnet := range config.Tailnets {
+		tsNetServers[k] = &tsnet.Server{
+			Hostname: tnet.ID,
+			AuthKey:  tnet.AuthKey,
+		}
+	}
+
 	// Create matchers from upstreams
 	matchers := make([]Matcher, 0)
 
@@ -69,10 +78,26 @@ func NewHandlerFromConfig(ctx context.Context, config *Config) (
 			return nil, nil, fmt.Errorf("failed to parse upstream URL: %w", err)
 		}
 
+		if upstreamURL.Scheme == "https" && upstreamURL.Port() == "" {
+			upstreamURL.Host = upstreamURL.Host + ":443"
+		}
+
+		var dialFunc func(context.Context, string, string) (net.Conn, error)
+
+		if upstream.Tailnet != "" {
+			tsNetServer, ok := tsNetServers[upstream.Tailnet]
+			if !ok {
+				return nil, nil, fmt.Errorf("tailnet %s not found", upstream.Tailnet)
+			}
+
+			dialFunc = tsNetServer.Dial
+		}
+
 		client := httpclient.NewUpsteamClient(httpclient.UpstreamClientOptions{
 			Host:       upstreamURL.Hostname(),
 			Port:       upstreamURL.Port(),
 			DNSServers: dnsServers,
+			DialFunc:   dialFunc,
 		})
 		matcher := MatcherFromUpstream(upstream, client)
 		matchers = append(matchers, matcher)
@@ -142,13 +167,18 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// RequestURI must be cleared to be accepted by the client.Do function.
-	r.RequestURI = ""
-	// here the host and port will be determined by the client, however,
-	// the host and scheme must be set to pass validation.
-	r.URL, _ = r.URL.Parse("http://host-is-ignored")
+	h := r.Header
 
-	resp, err := client.Do(r)
+	rURL, err := url.Parse(fmt.Sprintf("https://charlieegan3.com%s", r.URL.Path))
+
+	req := &http.Request{
+		Method: r.Method,
+		Header: h,
+		URL:    rURL,
+		Body:   r.Body,
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		http.Error(w,
 			fmt.Errorf("failed to send request: %w", err).Error(),

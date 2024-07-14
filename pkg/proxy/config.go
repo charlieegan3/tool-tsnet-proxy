@@ -8,6 +8,9 @@ import (
 )
 
 type Config struct {
+	Addr string `yaml:"addr"`
+	Port int    `yaml:"port"`
+
 	DNSServers  []ConfigDNSServer        `yaml:"dns-servers"`
 	Middlewares []ConfigMiddleware       `yaml:"middlewares"`
 	Upstreams   []ConfigUpstream         `yaml:"upstreams"`
@@ -38,9 +41,11 @@ type ConfigUpstream struct {
 	Endpoint     string   `yaml:"endpoint"`
 	Hosts        []string `yaml:"hosts"`
 	PathPrefixes []string `yaml:"path-prefixes"`
+	Tailnet      string   `yaml:"tailnet"`
 }
 
 type ConfigTailnet struct {
+	ID      string `yaml:"id"`
 	AuthKey string `yaml:"auth-key"`
 }
 

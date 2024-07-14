@@ -21,6 +21,14 @@ func TestLoadConfig(t *testing.T) {
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
+	if exp, got := "localhost", cfg.Addr; exp != got {
+		t.Fatalf("ListenAddr did not match expected: %q != %q", exp, got)
+	}
+
+	if exp, got := 8080, cfg.Port; exp != got {
+		t.Fatalf("Port did not match expected: %d != %d", exp, got)
+	}
+
 	expectedDNSServers := []ConfigDNSServer{
 		{Addr: "::1", Net: "udp6"},
 		{Addr: "[::1]:53", Net: "tcp6"},
@@ -73,6 +81,7 @@ func TestLoadConfig(t *testing.T) {
 				"/foo",
 				"/bar",
 			},
+			Tailnet: "tsnet",
 		},
 		{
 			Endpoint: "http://internal2.example.com",
@@ -103,10 +112,15 @@ func TestLoadConfig(t *testing.T) {
 		if !slices.Equal(us.PathPrefixes, expectedUpstreams[i].PathPrefixes) {
 			t.Fatalf("Upstream path-prefixes did not match expected")
 		}
+
+		if us.Tailnet != expectedUpstreams[i].Tailnet {
+			t.Fatalf("Upstream tailnet did not match expected")
+		}
 	}
 
 	expectedTailnets := map[string]ConfigTailnet{
 		"foobar": {
+			ID:      "proxy-box",
 			AuthKey: "example",
 		},
 	}
@@ -119,6 +133,10 @@ func TestLoadConfig(t *testing.T) {
 
 		if v.AuthKey != tn.AuthKey {
 			t.Fatalf("Auth key value %q for tailnet %q did not match expected %q", v.AuthKey, k, tn.AuthKey)
+		}
+
+		if v.ID != tn.ID {
+			t.Fatalf("ID value %q for tailnet %q did not match expected %q", v.ID, k, tn.ID)
 		}
 	}
 }

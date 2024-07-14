@@ -1,3 +1,6 @@
+addr: "localhost"
+port: 8080
+
 dns-servers:
   - addr: "::1"
     net: "udp6"
@@ -9,6 +12,7 @@ dns-servers:
     net: "tcp4"
 tailnets:
   foobar:
+    id: "proxy-box"
     auth-key: "example"
 middlewares:
   - kind: "opa"
@@ -24,6 +28,7 @@ upstreams:
     path-prefixes:
       - "/foo"
       - "/bar"
+    tailnet: "tsnet"
   - endpoint: "http://internal2.example.com"
     hosts:
       - "foo2.example.com"

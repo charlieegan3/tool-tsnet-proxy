@@ -22,6 +22,10 @@ func MatcherFromUpstream(upstream ConfigUpstream, client *http.Client) Matcher {
 }
 
 func matchesHost(host string, hosts []string) bool {
+	if len(hosts) == 0 {
+		return true
+	}
+
 	for _, h := range hosts {
 		if strings.HasPrefix(host, h) {
 			return true
@@ -32,6 +36,10 @@ func matchesHost(host string, hosts []string) bool {
 }
 
 func matchesPath(path string, prefixes []string) bool {
+	if len(prefixes) == 0 {
+		return true
+	}
+
 	for _, prefix := range prefixes {
 		if strings.HasPrefix(path, prefix) {
 			return true
