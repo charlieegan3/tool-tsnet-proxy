@@ -54,4 +54,3 @@ linters-settings:
       - prefix(github.com/charlieegan3/tool-tsnet-proxy)
       - blank
       - dot
-
