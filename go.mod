@@ -1,6 +1,6 @@
 module github.com/charlieegan3/tool-tsnet-proxy
 
-go 1.22.4
+go 1.22.5
 
 require (
 	github.com/miekg/dns v1.1.59
