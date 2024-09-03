@@ -94,10 +94,11 @@ func NewHandlerFromConfig(ctx context.Context, config *Config) (
 		}
 
 		client := httpclient.NewUpsteamClient(httpclient.UpstreamClientOptions{
-			Host:       upstreamURL.Hostname(),
-			Port:       upstreamURL.Port(),
-			DNSServers: dnsServers,
-			DialFunc:   dialFunc,
+			Host:               upstreamURL.Hostname(),
+			Port:               upstreamURL.Port(),
+			DNSServers:         dnsServers,
+			DialFunc:           dialFunc,
+			InsecureSkipVerify: upstream.InsecureSkipVerify,
 		})
 		matcher := MatcherFromUpstream(upstream, client)
 		matchers = append(matchers, matcher)
@@ -151,11 +152,12 @@ type proxy struct {
 
 func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var client *http.Client
+	var endpoint string
 
 	for _, matcher := range p.matchers {
 		var ok bool
 
-		client, ok = matcher(r)
+		client, endpoint, ok = matcher(r)
 		if ok {
 			break
 		}
@@ -167,13 +169,16 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h := r.Header
+	rURL, err := url.Parse(fmt.Sprintf("%s%s", endpoint, r.URL.Path))
+	if err != nil {
+		http.Error(w, "failed to build downstream URL", http.StatusInternalServerError)
 
-	rURL, err := url.Parse(fmt.Sprintf("https://charlieegan3.com%s", r.URL.Path))
+		return
+	}
 
 	req := &http.Request{
 		Method: r.Method,
-		Header: h,
+		Header: r.Header,
 		URL:    rURL,
 		Body:   r.Body,
 	}

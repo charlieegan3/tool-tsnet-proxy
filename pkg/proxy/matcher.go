@@ -5,19 +5,19 @@ import (
 	"strings"
 )
 
-type Matcher func(*http.Request) (*http.Client, bool)
+type Matcher func(*http.Request) (*http.Client, string, bool)
 
 func MatcherFromUpstream(upstream ConfigUpstream, client *http.Client) Matcher {
-	return func(req *http.Request) (*http.Client, bool) {
+	return func(req *http.Request) (*http.Client, string, bool) {
 		if !matchesHost(req.Host, upstream.Hosts) {
-			return nil, false
+			return nil, "", false
 		}
 
 		if !matchesPath(req.URL.Path, upstream.PathPrefixes) {
-			return nil, false
+			return nil, "", false
 		}
 
-		return client, true
+		return client, upstream.Endpoint, true
 	}
 }
 

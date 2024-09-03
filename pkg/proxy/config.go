@@ -38,10 +38,11 @@ type ConfigMiddlewarePropsOPABundle struct {
 }
 
 type ConfigUpstream struct {
-	Endpoint     string   `yaml:"endpoint"`
-	Hosts        []string `yaml:"hosts"`
-	PathPrefixes []string `yaml:"path-prefixes"`
-	Tailnet      string   `yaml:"tailnet"`
+	Endpoint           string   `yaml:"endpoint"`
+	Hosts              []string `yaml:"hosts"`
+	PathPrefixes       []string `yaml:"path-prefixes"`
+	Tailnet            string   `yaml:"tailnet"`
+	InsecureSkipVerify bool     `yaml:"insecure-skip-verify"`
 }
 
 type ConfigTailnet struct {

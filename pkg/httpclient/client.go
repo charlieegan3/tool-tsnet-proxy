@@ -2,6 +2,7 @@ package httpclient
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -10,10 +11,11 @@ import (
 )
 
 type UpstreamClientOptions struct {
-	DialFunc   func(context.Context, string, string) (net.Conn, error)
-	DNSServers []DNSServer
-	Host       string
-	Port       string
+	DialFunc           func(context.Context, string, string) (net.Conn, error)
+	DNSServers         []DNSServer
+	Host               string
+	Port               string
+	InsecureSkipVerify bool
 }
 
 type DNSServer struct {
@@ -76,6 +78,7 @@ func NewUpsteamClient(opts UpstreamClientOptions) *http.Client {
 
 	return &http.Client{
 		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.InsecureSkipVerify},
 			DialContext: func(ctx context.Context, network string, _ string) (net.Conn, error) {
 				ips, err := customResolver.LookupIP(ctx, "ip", upstreamServerHost)
 				if err != nil {

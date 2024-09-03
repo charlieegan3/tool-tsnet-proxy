@@ -60,9 +60,14 @@ func TestMatcherFromUpstream(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, matched := matcher(test.req)
+		_, e, matched := matcher(test.req)
+
 		if matched != test.expect {
 			t.Errorf("Matcher for req host %q and path %q = %v; want %v", test.req.Host, test.req.URL.Path, matched, test.expect)
+		}
+
+		if matched && e != upstream.Endpoint {
+			t.Errorf("unexpected upstream: %s", e)
 		}
 	}
 }

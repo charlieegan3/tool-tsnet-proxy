@@ -73,16 +73,16 @@ func TestProxyWithTwoMatchers(t *testing.T) {
 	defer upstreamServer1.Close()
 
 	// function that will match requests to the upstream servers
-	upstreamMatcher1 := func(req *http.Request) (*http.Client, bool) {
+	upstreamMatcher1 := func(req *http.Request) (*http.Client, string, bool) {
 		if req.URL.Path != "/foobar" {
-			return nil, false
+			return nil, "", false
 		}
 
 		if !strings.HasPrefix(req.Host, externalHost1) {
-			return nil, false
+			return nil, "", false
 		}
 
-		return upstreamServerClient1, true
+		return upstreamServerClient1, fmt.Sprintf("http://%s", upstreamServerHost1), true
 	}
 
 	// upstream servers that are running behind the proxy
@@ -101,16 +101,16 @@ func TestProxyWithTwoMatchers(t *testing.T) {
 	defer upstreamServer2.Close()
 
 	// function that will match requests to the upstream servers
-	upstreamMatcher2 := func(req *http.Request) (*http.Client, bool) {
+	upstreamMatcher2 := func(req *http.Request) (*http.Client, string, bool) {
 		if req.URL.Path != "/foobar" {
-			return nil, false
+			return nil, "", false
 		}
 
 		if !strings.HasPrefix(req.Host, externalHost2) {
-			return nil, false
+			return nil, "", false
 		}
 
-		return upstreamServerClient2, true
+		return upstreamServerClient2, fmt.Sprintf("http://%s", upstreamServerHost2), true
 	}
 
 	// create the proxy handler and server
@@ -213,16 +213,16 @@ func TestProxyWithMiddlewares(t *testing.T) {
 	defer upstreamServer.Close()
 
 	// function that will match requests to the upstream servers
-	upstreamMatcher := func(req *http.Request) (*http.Client, bool) {
+	upstreamMatcher := func(req *http.Request) (*http.Client, string, bool) {
 		if req.URL.Path != "/foobar" {
-			return nil, false
+			return nil, "", false
 		}
 
 		if !strings.HasPrefix(req.Host, externalHost) {
-			return nil, false
+			return nil, "", false
 		}
 
-		return upstreamServerClient, true
+		return upstreamServerClient, fmt.Sprintf("http://%s", upstreamServerHost), true
 	}
 
 	addHeaderMiddleware := func(next http.Handler) http.Handler {
