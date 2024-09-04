@@ -139,4 +139,20 @@ func TestLoadConfig(t *testing.T) {
 			t.Fatalf("ID value %q for tailnet %q did not match expected %q", v.ID, k, tn.ID)
 		}
 	}
+
+	if exp, got := "https://example.com/callback", cfg.OAuth.CallbackURL; exp != got {
+		t.Fatalf("OAuth callback url did not match expected: %q != %q", exp, got)
+	}
+
+	if exp, got := "https://foo.example.com", cfg.OAuth.ProviderURL; exp != got {
+		t.Fatalf("OAuth provider URL did not match expected: %q != %q", exp, got)
+	}
+
+	if exp, got := "proxy-foo", cfg.OAuth.ClientID; exp != got {
+		t.Fatalf("OAuth client ID did not match expected: %q != %q", exp, got)
+	}
+
+	if exp, got := "secretsecretsecret", cfg.OAuth.ClientSecret; exp != got {
+		t.Fatalf("OAuth client secret did not match expected: %q != %q", exp, got)
+	}
 }

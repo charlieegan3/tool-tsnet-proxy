@@ -15,6 +15,8 @@ type Config struct {
 	Middlewares []ConfigMiddleware       `yaml:"middlewares"`
 	Upstreams   []ConfigUpstream         `yaml:"upstreams"`
 	Tailnets    map[string]ConfigTailnet `yaml:"tailnets"`
+
+	OAuth OAuthConfig `yaml:"oauth"`
 }
 
 type ConfigDNSServer struct {
@@ -48,6 +50,13 @@ type ConfigUpstream struct {
 type ConfigTailnet struct {
 	ID      string `yaml:"id"`
 	AuthKey string `yaml:"auth-key"`
+}
+
+type OAuthConfig struct {
+	CallbackURL  string `yaml:"callback_url"`
+	ProviderURL  string `yaml:"provider_url"`
+	ClientID     string `yaml:"client_id"`
+	ClientSecret string `yaml:"client_secret"`
 }
 
 func LoadConfig(r io.Reader) (*Config, error) {

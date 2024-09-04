@@ -36,3 +36,8 @@ upstreams:
     path-prefixes:
       - "/foo2"
       - "/bar2"
+oauth:
+  callback_url: "https://example.com/callback"
+  provider_url: "https://foo.example.com"
+  client_id: proxy-foo
+  client_secret: "secretsecretsecret"
