@@ -58,6 +58,7 @@ type OAuthConfig struct {
 	ProviderURL  string `yaml:"provider_url"`
 	ClientID     string `yaml:"client_id"`
 	ClientSecret string `yaml:"client_secret"`
+	Debug        bool   `yaml:"debug"`
 }
 
 func LoadConfig(r io.Reader) (*Config, error) {

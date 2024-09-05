@@ -99,6 +99,7 @@ func (p *Proxy) HTTPAttach(router *mux.Router) error {
 	)
 
 	mw, err := oauthmiddleware.Init(&oauthmiddleware.Config{
+		Debug:           p.cfg.OAuth.Debug,
 		OAuth2Connector: oauth2Config,
 		IDTokenVerifier: idTokenVerifier,
 		Validators: []oauthmiddleware.IDTokenValidator{
