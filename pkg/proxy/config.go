@@ -10,6 +10,7 @@ import (
 type Config struct {
 	Addr string `yaml:"addr"`
 	Port int    `yaml:"port"`
+	Host string `yaml:"host"`
 
 	DNSServers  []ConfigDNSServer        `yaml:"dns-servers"`
 	Middlewares []ConfigMiddleware       `yaml:"middlewares"`

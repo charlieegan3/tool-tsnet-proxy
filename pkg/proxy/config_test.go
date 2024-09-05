@@ -29,6 +29,10 @@ func TestLoadConfig(t *testing.T) {
 		t.Fatalf("Port did not match expected: %d != %d", exp, got)
 	}
 
+	if exp, got := "proxy.example.com", cfg.Host; exp != got {
+		t.Fatalf("Host did not match expected: %q != %q", exp, got)
+	}
+
 	expectedDNSServers := []ConfigDNSServer{
 		{Addr: "::1", Net: "udp6"},
 		{Addr: "[::1]:53", Net: "tcp6"},

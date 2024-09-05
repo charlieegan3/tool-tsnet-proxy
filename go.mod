@@ -3,9 +3,15 @@ module github.com/charlieegan3/tool-tsnet-proxy
 go 1.22.5
 
 require (
+	github.com/charlieegan3/oauth-middleware v0.0.0-20240905074457-d1799c9db3cc
+	github.com/charlieegan3/toolbelt v0.0.0-20240901184222-2e825ae1ecd8
+	github.com/coreos/go-oidc v2.2.1+incompatible
+	github.com/gorilla/mux v1.8.1
 	github.com/miekg/dns v1.1.59
 	github.com/open-policy-agent/opa v0.65.0
+	golang.org/x/oauth2 v0.21.0
 	gopkg.in/yaml.v2 v2.4.0
+	tailscale.com v1.68.1
 )
 
 require (
@@ -34,13 +40,10 @@ require (
 	github.com/bits-and-blooms/bitset v1.13.0 // indirect
 	github.com/bytecodealliance/wasmtime-go/v3 v3.0.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/charlieegan3/oauth-middleware v0.0.0-20240622204233-c70d49cc30bf // indirect
-	github.com/charlieegan3/toolbelt v0.0.0-20240901184222-2e825ae1ecd8 // indirect
 	github.com/containerd/containerd v1.7.18 // indirect
 	github.com/containerd/errdefs v0.1.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/coreos/go-iptables v0.7.1-0.20240112124308-65c67c9f46e6 // indirect
-	github.com/coreos/go-oidc v2.2.1+incompatible // indirect
 	github.com/dblohm7/wingoes v0.0.0-20240119213807-a09d6be7affa // indirect
 	github.com/digitalocean/go-smbios v0.0.0-20180907143718-390a4f403a8e // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -60,7 +63,6 @@ require (
 	github.com/google/nftables v0.2.1-0.20240414091927-5e242ec57806 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/csrf v1.7.2 // indirect
-	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/hdevalence/ed25519consensus v0.2.0 // indirect
 	github.com/illarion/gonotify v1.0.1 // indirect
@@ -117,7 +119,6 @@ require (
 	golang.org/x/exp v0.0.0-20240119083558-1b970713d09a // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/oauth2 v0.21.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/term v0.21.0 // indirect
@@ -134,5 +135,4 @@ require (
 	nhooyr.io/websocket v1.8.10 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
-	tailscale.com v1.68.1 // indirect
 )

@@ -5,9 +5,11 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/coreos/go-oidc"
@@ -149,9 +151,55 @@ func (p *Proxy) HTTPAttach(router *mux.Router) error {
 }
 
 func (p *Proxy) HTTPHost() string {
-	// TODO: handle multiple
-	return p.cfg.Upstreams[0].Hosts[0]
+	hosts := []string{p.cfg.Host}
+
+	for _, upstream := range p.cfg.Upstreams {
+		for _, h := range upstream.Hosts {
+			hosts = append(hosts, h)
+		}
+	}
+
+	matcher, err := generateHostRegex(hosts)
+	if err != nil {
+		log.Fatalf("failed to generate host regex: %v", err)
+	}
+
+	return matcher
 }
 func (p *Proxy) HTTPPath() string { return "" }
 
 func (p *Proxy) ExternalJobsFuncSet(f func(job apis.ExternalJob) error) {}
+
+func generateHostRegex(hosts []string) (string, error) {
+	if len(hosts) == 0 {
+		return "", errors.New("no hosts provided")
+	}
+
+	var rootDomain string
+	var subDomains []string
+
+	for _, host := range hosts {
+		parsedURL, err := url.Parse(host)
+		if err != nil || parsedURL.Host == "" {
+			parsedURL = &url.URL{Host: host} // if input is not a URL, treat it as a plain host
+		}
+
+		parts := strings.Split(parsedURL.Host, ".")
+		if len(parts) < 2 {
+			return "", fmt.Errorf("invalid host) %q", host)
+		}
+
+		currentRoot := strings.Join(parts[len(parts)-2:], ".")
+		if rootDomain == "" {
+			rootDomain = currentRoot
+		} else if rootDomain != currentRoot {
+			return "", errors.New("hosts do not share the same root domain")
+		}
+
+		subDomains = append(subDomains, strings.Join(parts[:len(parts)-2], "."))
+	}
+
+	pattern := fmt.Sprintf("{%s}.%s", strings.Join(subDomains, "|"), rootDomain)
+
+	return pattern, nil
+}

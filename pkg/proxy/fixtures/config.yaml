@@ -1,5 +1,6 @@
 addr: "localhost"
 port: 8080
+host: "proxy.example.com"
 
 dns-servers:
   - addr: "::1"
