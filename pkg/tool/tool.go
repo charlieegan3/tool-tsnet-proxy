@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -145,6 +146,11 @@ func (p *Proxy) HTTPAttach(router *mux.Router) error {
 	}
 
 	router.Use(mw)
+	router.HandleFunc(callbackURL.Path, func(w http.ResponseWriter, r *http.Request) {
+		// handled by middleware, but must match in router for mw to run
+		w.Write([]byte("callback"))
+	})
+
 	router.Handle("/", proxyHandler)
 
 	return nil
