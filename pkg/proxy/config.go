@@ -58,6 +58,7 @@ type OAuthConfig struct {
 	ProviderURL  string `yaml:"provider_url"`
 	ClientID     string `yaml:"client_id"`
 	ClientSecret string `yaml:"client_secret"`
+	Domain       string `yaml:"domain"`
 	Debug        bool   `yaml:"debug"`
 }
 

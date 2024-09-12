@@ -3,7 +3,7 @@ module github.com/charlieegan3/tool-tsnet-proxy
 go 1.22.5
 
 require (
-	github.com/charlieegan3/oauth-middleware v0.0.0-20240905074457-d1799c9db3cc
+	github.com/charlieegan3/oauth-middleware v0.0.0-20240912120203-a5c76ecfe5a1
 	github.com/charlieegan3/toolbelt v0.0.0-20240901184222-2e825ae1ecd8
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/gorilla/mux v1.8.1
