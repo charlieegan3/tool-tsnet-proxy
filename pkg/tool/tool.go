@@ -117,8 +117,8 @@ func (p *Proxy) HTTPAttach(router *mux.Router) error {
 				return map[any]any{"email": c.Email}, true
 			},
 		},
-		AuthBasePath:     "/",
-		CallbackBasePath: callbackURL.Path,
+		AuthBasePath: "/",
+		CallbackPath: callbackURL.Path,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to init oauth middleware: %w", err)

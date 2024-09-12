@@ -67,6 +67,8 @@ github.com/charlieegan3/oauth-middleware v0.0.0-20240905074457-d1799c9db3cc h1:c
 github.com/charlieegan3/oauth-middleware v0.0.0-20240905074457-d1799c9db3cc/go.mod h1:973qiILGwQOXSrycQg8/SpJ2EJEiVAvQjODG0RUHzqI=
 github.com/charlieegan3/oauth-middleware v0.0.0-20240912120203-a5c76ecfe5a1 h1:Hq++3RPT5dOphmj+dDy70LGacOoLHUaub+SEPkMgAM0=
 github.com/charlieegan3/oauth-middleware v0.0.0-20240912120203-a5c76ecfe5a1/go.mod h1:973qiILGwQOXSrycQg8/SpJ2EJEiVAvQjODG0RUHzqI=
+github.com/charlieegan3/oauth-middleware v0.0.0-20240912125010-6c6b6398e385 h1:nZuYDpxG5jZejHTwHepfkp2qEp8ee5g9oblf0B90+KE=
+github.com/charlieegan3/oauth-middleware v0.0.0-20240912125010-6c6b6398e385/go.mod h1:973qiILGwQOXSrycQg8/SpJ2EJEiVAvQjODG0RUHzqI=
 github.com/charlieegan3/toolbelt v0.0.0-20240901184222-2e825ae1ecd8 h1:8D1PEPrqwyAlrAmVEwrW/CLl3LbYm0apU/vb3B6nTeU=
 github.com/charlieegan3/toolbelt v0.0.0-20240901184222-2e825ae1ecd8/go.mod h1:d/pl8NlwAI6QzHmhj3rC+uBMUhFHu16w0eLByY8FFyQ=
 github.com/cilium/ebpf v0.12.3 h1:8ht6F9MquybnY97at+VDZb3eQQr8ev79RueWeVaEcG4=
